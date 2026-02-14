@@ -1,0 +1,8 @@
+{
+  "description": "Stocks you want to track that are NOT in your Trading 212 portfolio. Add ticker symbols here.",
+  "watchlist": [
+    "AAPL",
+    "MSFT",
+    "GOOGL"
+  ]
+}
