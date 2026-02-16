@@ -1,0 +1,61 @@
+name: Daily Stock Report
+
+on:
+  schedule:
+    # 5 PM UTC, Monday-Friday (5 PM GMT / 6 PM BST)
+    - cron: "0 17 * * 1-5"
+  workflow_dispatch: {}  # Allow manual trigger from Actions tab
+
+permissions:
+  issues: write
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate report
+        env:
+          TRADING212_API_KEY: ${{ secrets.TRADING212_API_KEY }}
+          TRADING212_API_SECRET: ${{ secrets.TRADING212_API_SECRET }}
+          TRADING212_ENV: ${{ vars.TRADING212_ENV || 'live' }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: python main.py report -o report.txt
+
+      - name: Create GitHub Issue with report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +"%Y-%m-%d")
+
+          # Build issue body with report wrapped in a code block
+          {
+            echo "## End-of-Day Stock Report — ${DATE}"
+            echo ""
+            echo '```'
+            cat report.txt
+            echo '```'
+            echo ""
+            echo "*Generated automatically by [Daily Stock Report](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) workflow.*"
+          } > issue_body.md
+
+          gh issue create \
+            --title "Daily Stock Report — ${DATE}" \
+            --body-file issue_body.md \
+            --label "daily-report"
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ github.run_id }}
+          path: report.txt
+          retention-days: 30

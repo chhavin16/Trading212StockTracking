@@ -106,6 +106,31 @@ The report flags potential buying opportunities based on simple heuristics:
 
 These are informational signals, not financial advice. Always do your own research.
 
+## Automated Daily Reports (GitHub Actions)
+
+A GitHub Actions workflow runs the report automatically at **5 PM UTC every weekday** (Mon–Fri) and creates a GitHub Issue with the results. You'll get an email notification from GitHub when each report is posted.
+
+### Setup
+
+1. Go to your repository on GitHub: **Settings > Secrets and variables > Actions**
+2. Add the following **Repository secrets**:
+
+   | Secret | Required? | Description |
+   |--------|-----------|-------------|
+   | `TRADING212_API_KEY` | Optional | Your Trading 212 API key |
+   | `TRADING212_API_SECRET` | Optional | Your Trading 212 API secret |
+   | `FINNHUB_API_KEY` | Optional | Your Finnhub API key for news |
+
+3. Optionally set a **Repository variable**:
+
+   | Variable | Default | Description |
+   |----------|---------|-------------|
+   | `TRADING212_ENV` | `live` | `live` or `demo` |
+
+4. Create a `daily-report` label in your repository (Issues > Labels > New label) so the issues are easy to filter.
+
+The workflow can also be triggered manually from the **Actions** tab using "Run workflow".
+
 ## Project Structure
 
 ```
