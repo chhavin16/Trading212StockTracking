@@ -1,5 +1,4 @@
 anthropic>=0.34.0
-replicate>=0.25.0
 streamlit>=1.35.0
 Pillow>=10.3.0
 requests>=2.31.0

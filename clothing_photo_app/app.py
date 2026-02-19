@@ -8,9 +8,10 @@ import os
 import io
 import base64
 
+import time
+
 import streamlit as st
 import anthropic
-import replicate
 import requests
 from PIL import Image
 from dotenv import load_dotenv
@@ -174,6 +175,43 @@ def _download_url(url: str) -> bytes:
     return resp.content
 
 
+def _replicate_run(model: str, input_data: dict) -> list:
+    """Call the Replicate HTTP API directly (no replicate package needed)."""
+    token = os.getenv("REPLICATE_API_TOKEN")
+    owner, name = model.split("/", 1)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Prefer": "wait=60",
+    }
+    resp = requests.post(
+        f"https://api.replicate.com/v1/models/{owner}/{name}/predictions",
+        json={"input": input_data},
+        headers=headers,
+        timeout=120,
+    )
+    resp.raise_for_status()
+    prediction = resp.json()
+
+    # Poll until done if the Prefer: wait header timed out early
+    poll_headers = {"Authorization": f"Bearer {token}"}
+    while prediction.get("status") not in ("succeeded", "failed", "canceled"):
+        time.sleep(3)
+        poll = requests.get(
+            f"https://api.replicate.com/v1/predictions/{prediction['id']}",
+            headers=poll_headers,
+            timeout=30,
+        )
+        poll.raise_for_status()
+        prediction = poll.json()
+
+    if prediction.get("status") != "succeeded":
+        raise RuntimeError(f"Replicate prediction failed: {prediction.get('error')}")
+
+    output = prediction.get("output", [])
+    return output if isinstance(output, list) else [output]
+
+
 def generate_img2img(image_bytes: bytes, prompt: str, strength: float) -> bytes | None:
     """
     Transform the uploaded photo into a professional fashion photograph
@@ -182,9 +220,9 @@ def generate_img2img(image_bytes: bytes, prompt: str, strength: float) -> bytes 
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     data_url = f"data:image/jpeg;base64,{b64}"
 
-    output = replicate.run(
+    output = _replicate_run(
         "black-forest-labs/flux-dev",
-        input={
+        {
             "image": data_url,
             "prompt": prompt,
             "strength": strength,
@@ -195,11 +233,9 @@ def generate_img2img(image_bytes: bytes, prompt: str, strength: float) -> bytes 
         },
     )
 
-    result = list(output)[0] if hasattr(output, "__iter__") else output
+    result = output[0] if output else None
     if isinstance(result, str) and result.startswith("http"):
         return _download_url(result)
-    if hasattr(result, "read"):
-        return result.read()
     return None
 
 
@@ -208,9 +244,9 @@ def generate_txt2img(prompt: str) -> bytes | None:
     Generate a professional fashion photograph from text using
     FLUX 1.1 Pro on Replicate.
     """
-    output = replicate.run(
+    output = _replicate_run(
         "black-forest-labs/flux-1.1-pro",
-        input={
+        {
             "prompt": prompt,
             "width": 1024,
             "height": 1024,
@@ -220,11 +256,9 @@ def generate_txt2img(prompt: str) -> bytes | None:
         },
     )
 
-    result = list(output)[0] if hasattr(output, "__iter__") else output
+    result = output[0] if output else None
     if isinstance(result, str) and result.startswith("http"):
         return _download_url(result)
-    if hasattr(result, "read"):
-        return result.read()
     return None
 
 
