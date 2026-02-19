@@ -126,16 +126,16 @@ for a professional fashion photograph with these settings:
 - Background: {BACKGROUND_MAP.get(background, background)}
 - Lighting: {LIGHTING_MAP.get(lighting, lighting)}
 
+CRITICAL: The prompt must preserve the EXACT clothing design — same colors, same pattern,
+same cut, same fabric texture, same print or graphic if present. Do NOT invent new designs.
+
 Your response MUST follow this exact format with no extra text before or after:
 
 ANALYSIS:
-<2–4 sentences describing the clothing: type, colors, pattern, fabric, style category, and key design details>
+<2–4 sentences describing the clothing: type, exact colors, pattern, fabric, style category, and key design details>
 
 PROMPT:
-<A 4–6 sentence photorealistic image generation prompt that faithfully describes the exact clothing item above,
-includes a fitting model, the specified background and lighting, professional photography terms
-(shallow depth of field, 85mm lens, etc.), and quality descriptors like
-"photorealistic", "4K ultra-detailed", "professional fashion photography">"""
+<A 4–6 sentence photorealistic image generation prompt. Start with "The EXACT same [garment] as shown, with identical [colors/pattern/design details]," then describe a fitting model wearing it, the specified background and lighting, professional photography terms (shallow depth of field, 85mm lens, etc.), and quality descriptors like "photorealistic", "4K ultra-detailed", "professional fashion photography". Never change the clothing design.>"""
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
@@ -327,15 +327,15 @@ def main():
             ),
         )
 
-        strength = 0.75
+        strength = 0.45
         if mode.startswith("Transform"):
             strength = st.slider(
                 "Transformation Strength",
-                min_value=0.30,
-                max_value=0.95,
-                value=0.75,
+                min_value=0.10,
+                max_value=0.80,
+                value=0.45,
                 step=0.05,
-                help="Lower → stays closer to your original photo. Higher → more creative freedom.",
+                help="Lower → preserves your exact design more faithfully. Higher → more creative freedom but may alter the design.",
             )
 
         st.divider()
